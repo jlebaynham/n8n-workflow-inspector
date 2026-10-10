@@ -1,0 +1,478 @@
+{
+  "name": "Broker Inbox Triage",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "id": "625e56b0-20a5-45f9-a4eb-3c24a1ec7988",
+      "name": "New email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1248,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "model",
+              "value": "gpt-4o-mini",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "systemPrompt",
+              "value": "You are an email triage assistant for an insurance broker. Classify the email into exactly one category: renewal, claim, certificate_request, endorsement, new_enquiry, insurer_correspondence, noise, unknown. Use unknown whenever you are not confident which category fits. Do not force an uncertain email into the nearest category. Reply with JSON only, using the keys: category (string), urgent (boolean), summary (string, max 20 words), draft (string). The draft is a short polite acknowledgement and must be an empty string unless the category is new_enquiry or certificate_request. Never state or imply any policy terms, cover, limits, excess, premium, dates or eligibility in the draft. Never give advice about whether something is covered. If the email asks a coverage question, set urgent to false, write the summary, and leave the draft empty.",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "sheetId",
+              "value": "PASTE_YOUR_GOOGLE_SHEET_ID_HERE",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "alertEmail",
+              "value": "PASTE_YOUR_ALERT_EMAIL_HERE",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "labelMap",
+              "value": "={{ ({ renewal: 'PASTE_RENEWAL_LABEL_ID', claim: 'PASTE_CLAIM_LABEL_ID', certificate_request: 'PASTE_CERTIFICATE_REQUEST_LABEL_ID', endorsement: 'PASTE_ENDORSEMENT_LABEL_ID', new_enquiry: 'PASTE_NEW_ENQUIRY_LABEL_ID', insurer_correspondence: 'PASTE_INSURER_CORRESPONDENCE_LABEL_ID', noise: 'PASTE_NOISE_LABEL_ID', unknown: 'PASTE_UNKNOWN_LABEL_ID' }) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a02ebd20-b0e4-4a07-b8c9-19834f0217e3",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1024,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3",
+              "leftValue": "={{ ($json.labelIds || []).some(id => Object.values($json.labelMap).includes(id)) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1e5a745-8307-40ab-ad12-8feecb307443",
+      "name": "Already processed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -800,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Settings').item.json.model, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: $('Settings').item.json.systemPrompt }, { role: 'user', content: 'From: ' + (($json.from && $json.from.value && $json.from.value[0] && $json.from.value[0].address) || '') + ' | Subject: ' + ($json.subject || '') + ' | Body: ' + String($json.text || '').slice(0, 600) } ] }) }}",
+        "options": {}
+      },
+      "id": "5f5c5d1e-39ef-42a2-8ae6-117c494b8964",
+      "name": "Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -576,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.choices[0].message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch (e) { parsed = { category: 'unknown', urgent: false, summary: 'Model response could not be read, needs manual review', draft: '' }; }\nconst email = $('Settings').item.json;\nreturn [{ json: { category: parsed.category, urgent: parsed.urgent === true, summary: parsed.summary || '', draft: parsed.draft || '', subject: email.subject || '', from: (email.from && email.from.value && email.from.value[0] && email.from.value[0].address) || '', id: email.id, threadId: email.threadId, receivedAt: new Date().toISOString() } }];"
+      },
+      "id": "96a219b7-92a9-4eb6-a4b4-28499f68374a",
+      "name": "Read result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $json.id }}",
+        "labelIds": "={{ [ $('Settings').item.json.labelMap[$json.category] ] }}"
+      },
+      "id": "06aecad0-54ea-43fa-8a66-76ec97fbd795",
+      "name": "Apply label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Settings').item.json.sheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "Subject": "={{ $('Read result').item.json.subject }}",
+            "Category": "={{ $('Read result').item.json.category }}",
+            "Urgent": "={{ $('Read result').item.json.urgent }}",
+            "Summary": "={{ $('Read result').item.json.summary }}",
+            "From": "={{ $('New email').item.json.headers.from.replace('From: ', '') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgent",
+              "displayName": "Urgent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "454c6555-7d2e-45ad-acc5-9d659bc10599",
+      "name": "Log to sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        80,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('Read result').item.json.subject }}",
+        "message": "={{ $('Read result').item.json.draft }}",
+        "options": {
+          "threadId": "={{ $('New email').item.json.threadId }}",
+          "sendTo": "={{ ($('New email').item.json.headers.from.match(/<(.+)>/) || [null, $('New email').item.json.headers.from.replace('From: ', '')])[1].trim() }}"
+        }
+      },
+      "id": "d21e54b2-d850-4568-8fd0-dcaf7e89140f",
+      "name": "Save a draft reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        544,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $('Read result').item.json.urgent }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "50833853-4b8a-48ab-8a83-92aad6527c5c",
+      "name": "Is it urgent?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Settings').item.json.alertEmail }}",
+        "subject": "=URGENT: {{ $('Read result').item.json.subject }}",
+        "message": "=<p><strong>Urgent email flagged by Inbox Triage</strong></p><p>From: {{ $('New email').item.json.headers.from }}</p><p>Subject: {{ $('Read result').item.json.subject }}</p><p>Summary: {{ $('Read result').item.json.summary }}</p>",
+        "options": {}
+      },
+      "id": "26031ce5-5558-49aa-b509-02de7a482e5d",
+      "name": "Alert me",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Read result').item.json.draft }}",
+              "rightValue": "new_enquiry",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "79d481be-3153-45bc-863b-a6cdf7ad52be",
+      "name": "Is there a draft?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "New email": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Already processed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify": {
+      "main": [
+        [
+          {
+            "node": "Read result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read result": {
+      "main": [
+        [
+          {
+            "node": "Apply label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply label": {
+      "main": [
+        [
+          {
+            "node": "Log to sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to sheet": {
+      "main": [
+        [
+          {
+            "node": "Is there a draft?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is it urgent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is it urgent?": {
+      "main": [
+        [
+          {
+            "node": "Alert me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is there a draft?": {
+      "main": [
+        [
+          {
+            "node": "Save a draft reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already processed?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}

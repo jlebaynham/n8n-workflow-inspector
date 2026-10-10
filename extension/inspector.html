@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workflow Inspector for n8n</title>
+  <link rel="icon" href="icons/icon-32.png">
+  <link rel="stylesheet" href="inspector.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand">
+        <img src="icons/icon-48.png" alt="" width="36" height="36">
+        <div>
+          <h1>Workflow Inspector</h1>
+          <p class="brand-sub">for n8n workflows</p>
+        </div>
+      </div>
+      <p class="offline"><span class="dot" aria-hidden="true"></span>Runs offline. Nothing leaves your browser.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card load" aria-labelledby="load-title">
+      <h2 id="load-title">Load a workflow</h2>
+      <p class="muted">In n8n, open the workflow, click the three dots, then <strong>Download</strong>. Or select nodes on the canvas and copy them.</p>
+      <label class="drop" id="drop">
+        <input type="file" id="file" accept=".json,application/json" hidden>
+        <span class="drop-icon" aria-hidden="true">⇪</span>
+        <span class="drop-main">Drop the .json file here or <u>choose a file</u></span>
+        <span class="drop-sub">Nothing is uploaded. The file is read inside this page.</span>
+      </label>
+      <details class="paste">
+        <summary>Or paste the workflow JSON</summary>
+        <textarea id="paste" rows="7" spellcheck="false" autocomplete="off" placeholder='{"name": "My workflow", "nodes": [ ... ], "connections": { ... }}'></textarea>
+        <button type="button" class="btn" id="paste-go">Inspect pasted JSON</button>
+      </details>
+      <div class="load-actions">
+        <button type="button" class="btn ghost" id="sample">Try a sample workflow</button>
+        <span class="muted small" id="loaded-name"></span>
+      </div>
+      <p class="error" id="error" role="alert" hidden></p>
+    </section>
+
+    <section id="results" hidden>
+      <section class="card overview" aria-labelledby="ov-title">
+        <p class="eyebrow">Overview</p>
+        <h2 id="ov-title"></h2>
+        <p class="muted" id="ov-note" hidden></p>
+        <dl class="facts" id="facts"></dl>
+      </section>
+
+      <div class="cols">
+        <section class="card" aria-labelledby="steps-title">
+          <p class="eyebrow">What it does</p>
+          <h2 id="steps-title">Step by step</h2>
+          <ol class="steps" id="steps"></ol>
+          <div id="unconnected-box" hidden>
+            <h3>Not connected to a starting step</h3>
+            <ul class="plain" id="unconnected"></ul>
+          </div>
+          <details id="notes-box" class="notes" hidden>
+            <summary>Notes the author left on the canvas</summary>
+            <div id="notes"></div>
+          </details>
+        </section>
+
+        <section class="card safety" aria-labelledby="safety-title">
+          <p class="eyebrow">Before you share</p>
+          <h2 id="safety-title">Safety check</h2>
+          <div class="verdict" id="verdict"></div>
+          <div id="findings"></div>
+
+          <div class="clean">
+            <h3>Make a clean copy</h3>
+            <p class="muted small">Always removes the keys and passwords the check finds, links to saved credentials, pinned test data, and n8n instance, workflow and webhook IDs. Your original file isn't touched.</p>
+            <label class="check"><input type="checkbox" id="opt-emails"> Also replace email addresses</label>
+            <label class="check"><input type="checkbox" id="opt-phones"> Also replace phone numbers</label>
+            <label class="check"><input type="checkbox" id="opt-picks"> Also clear sheets, channels and other picks from your account</label>
+            <div class="clean-actions">
+              <button type="button" class="btn" id="download">Download clean copy</button>
+              <button type="button" class="btn ghost" id="copy">Copy to clipboard</button>
+            </div>
+            <p class="small ok" id="copied" role="status" hidden></p>
+            <ul class="changes" id="changes" hidden></ul>
+            <div id="left-box" hidden>
+              <h4>Still worth a look by hand</h4>
+              <ul class="plain small" id="left"></ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Made by <a href="https://baynhams.dev" target="_blank" rel="noopener">Jon Baynham</a>. Not affiliated with or endorsed by n8n GmbH. The safety check catches common formats, it can't promise to catch everything, so give the file a final look before you share it.</p>
+  </footer>
+
+  <script type="module" src="inspector.js"></script>
+</body>
+</html>
