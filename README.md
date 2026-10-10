@@ -66,4 +66,4 @@ The safety check looks for common formats. It can't promise to catch everything 
 
 ## Licence
 
-MIT. Made by [Jon Baynham](https://baynhams.dev). Not affiliated with or endorsed by n8n GmbH. n8n is a trademark of n8n GmbH.
+MIT. Made by [Jon Baynham](https://baynhams.com.au). Not affiliated with or endorsed by n8n GmbH. n8n is a trademark of n8n GmbH.

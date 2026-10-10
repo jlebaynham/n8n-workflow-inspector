@@ -24,4 +24,4 @@ If this ever changes, this page will be updated before the new version is publis
 
 ## Contact
 
-jon@baynhams.dev
+jon@baynhams.com.au
