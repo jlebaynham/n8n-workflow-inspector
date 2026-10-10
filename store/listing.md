@@ -2,6 +2,8 @@
 
 ## Store listing tab
 
+Note: the first submission (10 Oct 2026) was rejected for "keyword spam" (violation reference Yellow Argon) because the description listed 16 service names. Keep brand names out of the description.
+
 **Name** (from the manifest): Workflow Inspector for n8n
 
 **Summary** (from the manifest, 116 of 132 characters):
@@ -18,14 +20,14 @@ Drop in a workflow file, or paste the JSON, and you get:
 
 • An overview: what starts it, which apps and services it uses, how many AI and custom-code steps it has, and where it sends data.
 • A step-by-step walkthrough in plain English that follows the connections from each starting step, including Yes and No branches, switch paths, and the models, memory and tools attached to AI agents.
-• A safety check that flags API keys and tokens (OpenAI-style keys, Anthropic, OpenRouter, Stripe, GitHub, Slack, Discord, Google, AWS, Telegram, SendGrid, Twilio, Airtable, Notion, Hugging Face and Mailchimp), bearer tokens, keys and passwords inside web addresses or code, private keys, links to your saved credentials, pinned test data, email addresses, phone numbers, sheets and channels picked from your account, and n8n IDs.
+• A safety check that flags API keys, access tokens, passwords and private keys (including ones hidden in web addresses or code), links to your saved credentials, pinned test data, email addresses, phone numbers, sheets and channels picked from your account, and n8n IDs.
 • A clean copy: one click replaces the keys and passwords it finds with placeholders and removes credential links, pinned data and n8n IDs, with options to also replace emails, phone numbers and account picks. Download it, or copy it straight back into n8n.
 
 Private by design
 Everything runs inside the extension's own page. It asks for no permissions, can't read the websites you visit, makes no network requests and stores nothing. Your workflow never leaves your computer, and any secret it finds is masked on screen.
 
 Who it's for
-• Template creators checking a workflow before publishing it to the n8n template library, GitHub or a marketplace
+• Template creators checking a workflow before publishing it to the n8n template library or a marketplace
 • Freelancers and agencies handing workflows over to clients
 • Anyone given a workflow who wants to know what it does before importing it
 
